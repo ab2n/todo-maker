@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Notes assistées</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+    }
+    #container {
+        display: flex;
+        gap: 20px;
+    }
+    #notes {
+        width: 70%;
+        height: 400px;
+        padding: 10px;
+        font-size: 16px;
+        line-height: 1.4;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+    }
+    #buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    button {
+        padding: 10px;
+        font-size: 16px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    button:hover {
+        opacity: 0.8;
+    }
+    .todo { background-color: #c8f0c8; }
+    .dec { background-color: #f9f0c8; }
+    .pers { background-color: #c8d4f0; }
+    #render {
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        min-height: 100px;
+        background-color: #f9f9f9;
+    }
+    .block { padding: 5px; margin-bottom: 5px; border-radius: 5px; }
+</style>
+</head>
+<body>
+
+<h1>Prise de notes assistée</h1>
+<div id="container">
+    <textarea id="notes" placeholder="Tape tes notes ici..."></textarea>
+    <div id="buttons">
+        <button class="todo" onclick="addTag('@todo')">✅ Tâche</button>
+        <button class="dec" onclick="addTag('@dec')">📌 Décision</button>
+        <button class="pers" onclick="addTag('@pers')">👤 Personne</button>
+    </div>
+</div>
+
+<h2>Rendu</h2>
+<div id="render"></div>
+
+<script>
+const notesArea = document.getElementById("notes");
+const renderDiv = document.getElementById("render");
+
+function addTag(tag) {
+    const start = notesArea.selectionStart;
+    const end = notesArea.selectionEnd;
+    const text = notesArea.value;
+    const before = text.substring(0, start);
+    const after = text.substring(end);
+    notesArea.value = before + " " + tag + " " + after;
+
+    // replace cursor after inserted tag
+    const cursorPos = start + tag.length + 2; // espace avant et après
+    notesArea.selectionStart = notesArea.selectionEnd = cursorPos;
+
+    renderNotes();
+}
+
+function renderNotes() {
+    const lines = notesArea.value.split("\n");
+    renderDiv.innerHTML = ""; // clear
+
+    lines.forEach(line => {
+        let div = document.createElement("div");
+        div.classList.add("block");
+
+        if (line.includes("@todo")) {
+            div.classList.add("todo");
+            div.textContent = "✅ " + line.replace("@todo", "").trim();
+        } else if (line.includes("@dec")) {
+            div.classList.add("dec");
+            div.textContent = "📌 " + line.replace("@dec", "").trim();
+        } else if (line.includes("@pers")) {
+            div.classList.add("pers");
+            div.textContent = "👤 " + line.replace("@pers", "").trim();
+        } else {
+            div.textContent = line;
+        }
+
+        renderDiv.appendChild(div);
+    });
+}
+
+// update rendu à chaque saisie
+notesArea.addEventListener("input", renderNotes);
+
+// initial render
+renderNotes();
+</script>
+
+</body>
+</html>
