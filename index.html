@@ -2,73 +2,62 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Notes assistées</title>
+<title>Notes assistées complètes</title>
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        margin: 40px;
-    }
-    #container {
-        display: flex;
-        gap: 20px;
-    }
-    #notes {
-        width: 70%;
-        height: 400px;
-        padding: 10px;
-        font-size: 16px;
-        line-height: 1.4;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-    }
-    #buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-    button {
-        padding: 10px;
-        font-size: 16px;
-        border-radius: 6px;
-        border: none;
-        cursor: pointer;
-        transition: 0.2s;
-    }
-    button:hover {
-        opacity: 0.8;
-    }
-    .todo { background-color: #c8f0c8; }
-    .dec { background-color: #f9f0c8; }
-    .pers { background-color: #c8d4f0; }
-    #render {
-        margin-top: 20px;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        min-height: 100px;
-        background-color: #f9f9f9;
-    }
-    .block { padding: 5px; margin-bottom: 5px; border-radius: 5px; }
+body { font-family: Arial, sans-serif; margin: 30px; }
+#container { display: flex; gap: 20px; }
+#notes { width: 70%; height: 300px; padding: 10px; font-size: 16px; line-height: 1.4; border: 1px solid #ccc; border-radius: 8px; }
+#buttons { display: flex; flex-direction: column; gap: 10px; }
+button { padding: 10px; font-size: 16px; border-radius: 6px; border: none; cursor: pointer; transition: 0.2s; }
+button:hover { opacity: 0.8; }
+.todo { background-color: #c8f0c8; }
+.dec { background-color: #f9f0c8; }
+.pers { background-color: #c8d4f0; }
+.file { background-color: #f0c8f0; }
+.meeting { background-color: #c8f0f0; }
+.event { background-color: #f0d0c8; }
+#render { margin-top: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; min-height: 150px; background-color: #f9f9f9; }
+.block { padding: 5px; margin-bottom: 5px; border-radius: 5px; display: flex; align-items: center; justify-content: space-between; cursor: grab; }
+.block.dragging { opacity: 0.5; }
+.block span { flex: 1; padding-left: 5px; }
+.filter-btns { margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
 </style>
 </head>
 <body>
 
-<h1>Prise de notes assistée</h1>
+<h1>Prise de notes assistée complète</h1>
+
 <div id="container">
     <textarea id="notes" placeholder="Tape tes notes ici..."></textarea>
     <div id="buttons">
         <button class="todo" onclick="addTag('@todo')">✅ Tâche</button>
         <button class="dec" onclick="addTag('@dec')">📌 Décision</button>
         <button class="pers" onclick="addTag('@pers')">👤 Personne</button>
+        <button class="file" onclick="addTag('@file')">📁 Fichier/File</button>
+        <button class="meeting" onclick="addTag('@meeting')">📅 Meeting</button>
+        <button class="event" onclick="addTag('@event')">🎉 Évènement</button>
     </div>
 </div>
 
-<h2>Rendu</h2>
+<div class="filter-btns">
+    <button onclick="filterBlocks('all')">Tout</button>
+    <button onclick="filterBlocks('todo')">Tâches</button>
+    <button onclick="filterBlocks('dec')">Décisions</button>
+    <button onclick="filterBlocks('pers')">Personnes</button>
+    <button onclick="filterBlocks('file')">Fichiers</button>
+    <button onclick="filterBlocks('meeting')">Meetings</button>
+    <button onclick="filterBlocks('event')">Évènements</button>
+    <button onclick="exportNotes()">📋 Exporter</button>
+</div>
+
+<h2>Rendu interactif</h2>
 <div id="render"></div>
 
 <script>
 const notesArea = document.getElementById("notes");
 const renderDiv = document.getElementById("render");
+let blocks = [];
+let currentFilter = 'all';
 
 function addTag(tag) {
     const start = notesArea.selectionStart;
@@ -77,37 +66,88 @@ function addTag(tag) {
     const before = text.substring(0, start);
     const after = text.substring(end);
     notesArea.value = before + " " + tag + " " + after;
-
-    // replace cursor after inserted tag
-    const cursorPos = start + tag.length + 2; // espace avant et après
+    const cursorPos = start + tag.length + 2;
     notesArea.selectionStart = notesArea.selectionEnd = cursorPos;
-
     renderNotes();
 }
 
 function renderNotes() {
     const lines = notesArea.value.split("\n");
-    renderDiv.innerHTML = ""; // clear
+    blocks = lines.map(line => line.trim()).filter(l => l.length > 0);
+    renderDiv.innerHTML = "";
 
-    lines.forEach(line => {
+    blocks.forEach((line) => {
         let div = document.createElement("div");
         div.classList.add("block");
 
+        const span = document.createElement("span");
+        div.appendChild(span);
+
         if (line.includes("@todo")) {
             div.classList.add("todo");
-            div.textContent = "✅ " + line.replace("@todo", "").trim();
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.onclick = () => div.classList.toggle("done");
+            div.prepend(checkbox);
+            span.textContent = line.replace("@todo","").trim();
         } else if (line.includes("@dec")) {
             div.classList.add("dec");
-            div.textContent = "📌 " + line.replace("@dec", "").trim();
+            span.textContent = "📌 " + line.replace("@dec","").trim();
         } else if (line.includes("@pers")) {
             div.classList.add("pers");
-            div.textContent = "👤 " + line.replace("@pers", "").trim();
+            span.textContent = "👤 " + line.replace("@pers","").trim();
+        } else if (line.includes("@file")) {
+            div.classList.add("file");
+            span.textContent = "📁 " + line.replace("@file","").trim();
+        } else if (line.includes("@meeting")) {
+            div.classList.add("meeting");
+            span.textContent = "📅 " + line.replace("@meeting","").trim();
+        } else if (line.includes("@event")) {
+            div.classList.add("event");
+            span.textContent = "🎉 " + line.replace("@event","").trim();
         } else {
-            div.textContent = line;
+            span.textContent = line;
         }
 
+        div.draggable = true;
+        div.addEventListener("dragstart", e => div.classList.add("dragging"));
+        div.addEventListener("dragend", e => { div.classList.remove("dragging"); reorderBlocks(); });
         renderDiv.appendChild(div);
     });
+
+    applyFilter();
+}
+
+function reorderBlocks() {
+    const newBlocks = [];
+    renderDiv.querySelectorAll(".block").forEach(div => {
+        let text = div.querySelector("span").textContent;
+        ["todo","dec","pers","file","meeting","event"].forEach(cls => {
+            if(div.classList.contains(cls)) text = "@" + cls + " " + text;
+        });
+        newBlocks.push(text);
+    });
+    notesArea.value = newBlocks.join("\n");
+}
+
+function filterBlocks(type) {
+    currentFilter = type;
+    applyFilter();
+}
+
+function applyFilter() {
+    renderDiv.querySelectorAll(".block").forEach(div => {
+        if(currentFilter === 'all') {
+            div.style.display = 'flex';
+        } else {
+            div.style.display = div.classList.contains(currentFilter) ? 'flex' : 'none';
+        }
+    });
+}
+
+function exportNotes() {
+    const text = notesArea.value;
+    navigator.clipboard.writeText(text).then(() => alert("Notes copiées dans le presse-papier !"));
 }
 
 // update rendu à chaque saisie
